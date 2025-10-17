@@ -2,18 +2,23 @@ import "./style.css";
 
 document.body.innerHTML = `
   <center><h1>Sticker Sketchpad!!!</h1><center>
-  <center><canvas id="canvasElement" width="256px" height="256px""></canvas></center>
+  <center><canvas id="canvas" width="256px" height="256px""></canvas></center>
   <p>\n\n</p>
   <center><button id="clear">clear</button></center>
-  <p id="test">test</p>
 `;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 //#region HTML ELEMENTS
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-const canvas = document.getElementById("canvasElement")!;
-const test = document.getElementById("test")!;
+//canvas
+const canvas: HTMLCanvasElement = document.getElementById(
+  "canvas",
+) as HTMLCanvasElement;
+const ctx = canvas.getContext("2d")!;
+
+//buttons
+const clear = document.getElementById("clear")!;
 
 //#endregion
 
@@ -21,22 +26,60 @@ const test = document.getElementById("test")!;
 //#region MOUSE LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-let mouseActive: boolean = false;
+const cursor = { active: false, x: 0, y: 0 };
+let cursorDownFlag: boolean = false;
 
-canvas.addEventListener("mousedown", () => {
-  mouseActive = true;
-  test.innerHTML = "true";
+canvas.addEventListener("mousedown", (e) => {
+  cursor.active = true;
+  cursorDownFlag = true;
+  cursor.x = e.offsetX;
+  cursor.y = e.offsetY;
 });
 
 canvas.addEventListener("mouseup", () => {
-  mouseActive = false;
-  test.innerHTML = "false";
+  cursor.active = false;
+  cursorDownFlag = false;
 });
 
 canvas.addEventListener("mouseleave", () => {
-  mouseActive = false;
-  test.innerHTML = "false";
+  cursor.active = false;
 });
 
-canvas.addEventListener("mousemove", () => {
+canvas.addEventListener("mouseenter", (e) => {
+  if (cursorDownFlag) {
+    cursor.active = true;
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
+  }
 });
+
+document.addEventListener("mouseup", () => {
+  cursorDownFlag = false;
+});
+
+document.addEventListener("mousedown", () => {
+  cursorDownFlag = true;
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (cursor.active) {
+    ctx.beginPath();
+    ctx.moveTo(cursor.x, cursor.y);
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
+  }
+});
+
+//#endregion
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+//#region CLEAR LOGIC
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+
+clear.addEventListener("click", () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+//#endregion
