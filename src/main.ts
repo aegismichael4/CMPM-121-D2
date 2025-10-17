@@ -27,23 +27,32 @@ const clear = document.getElementById("clear")!;
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 type Point = { x: number; y: number };
-const line: Point[] = [];
+type Line = Point[];
+let currentLine: Line;
+const lines: Line[] = [];
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (line.length < 1) return;
+  for (const line of lines) {
+    if (line.length < 1) continue;
 
-  ctx.beginPath();
-  ctx.moveTo(line[0].x, line[0].y);
+    ctx.beginPath();
+    ctx.moveTo(line[0].x, line[0].y);
 
-  for (const point of line) {
-    ctx.lineTo(point.x, point.y);
-    ctx.moveTo(point.x, point.y);
+    for (const point of line) {
+      ctx.lineTo(point.x, point.y);
+    }
+
+    ctx.stroke();
   }
-
-  ctx.stroke();
 }
+
+const redrawEvent = new Event("drawing-changed");
+
+canvas.addEventListener("drawing-changed", () => {
+  redraw();
+});
 
 //#endregion
 
@@ -55,6 +64,8 @@ const cursor = { active: false, x: 0, y: 0 };
 let cursorDownFlag: boolean = false;
 
 canvas.addEventListener("mousedown", (e) => {
+  currentLine = [];
+  lines.push(currentLine);
   cursor.active = true;
   cursorDownFlag = true;
   cursor.x = e.offsetX;
@@ -66,15 +77,39 @@ canvas.addEventListener("mouseup", () => {
   cursorDownFlag = false;
 });
 
-canvas.addEventListener("mouseleave", () => {
-  cursor.active = false;
+canvas.addEventListener("mouseleave", (e) => {
+  if (cursor.active) {
+    cursor.active = false;
+
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
+    currentLine.push({ x: cursor.x, y: cursor.y });
+
+    canvas.dispatchEvent(redrawEvent);
+  }
 });
 
 canvas.addEventListener("mouseenter", (e) => {
   if (cursorDownFlag) {
+    currentLine = [];
+    lines.push(currentLine);
+
     cursor.active = true;
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
+    currentLine.push({ x: cursor.x, y: cursor.y });
+
+    canvas.dispatchEvent(redrawEvent);
+  }
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (cursor.active) {
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
+    currentLine.push({ x: cursor.x, y: cursor.y });
+
+    canvas.dispatchEvent(redrawEvent);
   }
 });
 
@@ -86,15 +121,6 @@ document.addEventListener("mousedown", () => {
   cursorDownFlag = true;
 });
 
-canvas.addEventListener("mousemove", (e) => {
-  if (cursor.active) {
-    cursor.x = e.offsetX;
-    cursor.y = e.offsetY;
-    line.push({ x: cursor.x, y: cursor.y });
-    redraw();
-  }
-});
-
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -102,7 +128,9 @@ canvas.addEventListener("mousemove", (e) => {
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 clear.addEventListener("click", () => {
-  //line.c
+  lines.splice(0, lines.length);
+
+  canvas.dispatchEvent(redrawEvent);
 });
 
 //#endregion
