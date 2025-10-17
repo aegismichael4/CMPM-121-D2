@@ -23,6 +23,31 @@ const clear = document.getElementById("clear")!;
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
+//#region LINE LOGIC
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+
+type Point = { x: number; y: number };
+const line: Point[] = [];
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (line.length < 1) return;
+
+  ctx.beginPath();
+  ctx.moveTo(line[0].x, line[0].y);
+
+  for (const point of line) {
+    ctx.lineTo(point.x, point.y);
+    ctx.moveTo(point.x, point.y);
+  }
+
+  ctx.stroke();
+}
+
+//#endregion
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
 //#region MOUSE LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -63,12 +88,10 @@ document.addEventListener("mousedown", () => {
 
 canvas.addEventListener("mousemove", (e) => {
   if (cursor.active) {
-    ctx.beginPath();
-    ctx.moveTo(cursor.x, cursor.y);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
+    line.push({ x: cursor.x, y: cursor.y });
+    redraw();
   }
 });
 
@@ -79,7 +102,7 @@ canvas.addEventListener("mousemove", (e) => {
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 clear.addEventListener("click", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  //line.c
 });
 
 //#endregion
