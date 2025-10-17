@@ -4,7 +4,8 @@ document.body.innerHTML = `
   <center><h1>Sticker Sketchpad!!!</h1><center>
   <center><canvas id="canvas" width="256px" height="256px""></canvas></center>
   <p>\n\n</p>
-  <center><button id="clear">clear</button></center>
+  <center><button id="clear">clear</button> <button id="undo">undo</button>
+    <button id="redo">redo</button></center>
 `;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -19,6 +20,8 @@ const ctx = canvas.getContext("2d")!;
 
 //buttons
 const clear = document.getElementById("clear")!;
+const undo = document.getElementById("undo")!;
+const redo = document.getElementById("redo")!;
 
 //#endregion
 
@@ -30,6 +33,7 @@ type Point = { x: number; y: number };
 type Line = Point[];
 let currentLine: Line;
 const lines: Line[] = [];
+const redoLines: Line[] = [];
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -124,12 +128,26 @@ document.addEventListener("mousedown", () => {
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-//#region CLEAR LOGIC
+//#region BUTTON LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 clear.addEventListener("click", () => {
   lines.splice(0, lines.length);
 
+  canvas.dispatchEvent(redrawEvent);
+});
+
+undo.addEventListener("click", () => {
+  if (lines.length < 1) return;
+
+  redoLines.push(lines.pop() as Line);
+  canvas.dispatchEvent(redrawEvent);
+});
+
+redo.addEventListener("click", () => {
+  if (redoLines.length < 1) return;
+
+  lines.push(redoLines.pop() as Line);
   canvas.dispatchEvent(redrawEvent);
 });
 
