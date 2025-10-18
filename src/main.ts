@@ -6,22 +6,29 @@ document.body.innerHTML = `
   <p>\n\n</p>
   <center><button id="clear">clear</button> <button id="undo">undo</button>
     <button id="redo">redo</button></center>
+  <p>\n</p>
+  <center> <button id="line-width-down">Line Width Down</button> <button id="line-width-up">Line Width Up</button>
+    <p> line width: <span id="curr-line-width">1</span>px</p></center>
 `;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 //#region HTML ELEMENTS
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-//canvas
+// canvas
 const canvas: HTMLCanvasElement = document.getElementById(
   "canvas",
 ) as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 
-//buttons
+// clear/undo/redo
 const clear = document.getElementById("clear")!;
 const undo = document.getElementById("undo")!;
 const redo = document.getElementById("redo")!;
+
+// line width
+const lineWidthDown = document.getElementById("line-width-down")!;
+const lineWidthUp = document.getElementById("line-width-up")!;
 
 //#endregion
 
@@ -135,9 +142,10 @@ document.addEventListener("mousedown", () => {
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-//#region BUTTON LOGIC
+//#region CLEAR/UNDO/REDO LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
+//button listeners
 clear.addEventListener("click", () => {
   commands.splice(0, commands.length);
 
@@ -145,17 +153,69 @@ clear.addEventListener("click", () => {
 });
 
 undo.addEventListener("click", () => {
+  undoCommand();
+});
+
+redo.addEventListener("click", () => {
+  redoCommand();
+});
+
+// undo/redo functionality
+function undoCommand() {
   if (commands.length < 1) return;
 
   redoCommands.push(commands.pop() as LineCommand);
   notify("drawing-changed");
-});
+}
 
-redo.addEventListener("click", () => {
+function redoCommand() {
   if (redoCommands.length < 1) return;
 
   commands.push(redoCommands.pop() as LineCommand);
   notify("drawing-changed");
+}
+
+//undo keys
+let ctrlDown: boolean = false;
+
+document.addEventListener("keydown", (e) => {
+  const key: string = (e as KeyboardEvent).key;
+
+  console.log(key);
+
+  switch (key) {
+    case "Control":
+      ctrlDown = true;
+      break;
+    case "z":
+      if (ctrlDown) undoCommand();
+      break;
+    case "y":
+      if (ctrlDown) redoCommand();
+      break;
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  if ((e as KeyboardEvent).key === "Control") {
+    ctrlDown = false;
+  }
+});
+
+//#endregion
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+//#region LINE WIDTH LOGIC
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+
+//let currLineWidth: number = 1;
+
+lineWidthDown.setAttribute("disabled", "true");
+
+lineWidthDown.addEventListener("click", () => {
+});
+
+lineWidthUp.addEventListener("click", () => {
 });
 
 //#endregion
