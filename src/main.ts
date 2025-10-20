@@ -27,8 +27,13 @@ const undo = document.getElementById("undo")!;
 const redo = document.getElementById("redo")!;
 
 // line width
-const lineWidthDown = document.getElementById("line-width-down")!;
-const lineWidthUp = document.getElementById("line-width-up")!;
+const lineWidthDown: HTMLButtonElement = document.getElementById(
+  "line-width-down",
+) as HTMLButtonElement;
+const lineWidthUp: HTMLButtonElement = document.getElementById(
+  "line-width-up",
+) as HTMLButtonElement;
+const lineWidthDisplay = document.getElementById("curr-line-width")!;
 
 //#endregion
 
@@ -59,15 +64,17 @@ const redoCommands: LineCommand[] = [];
 
 class LineCommand {
   points: Point[] = [];
+  lineWidth: number;
 
   constructor(x: number, y: number) {
     this.points = [{ x, y }];
+    this.lineWidth = currLineWidth;
   }
 
   display(ctx: CanvasRenderingContext2D) {
     if (this.points.length < 1) return;
 
-    ctx.lineWidth = 1.0;
+    ctx.lineWidth = this.lineWidth;
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
 
@@ -208,14 +215,34 @@ document.addEventListener("keyup", (e) => {
 //#region LINE WIDTH LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-//let currLineWidth: number = 1;
+let currLineWidth: number = 1;
+const maxLineWidth: number = 10;
 
-lineWidthDown.setAttribute("disabled", "true");
-
+lineWidthDown.disabled = true;
 lineWidthDown.addEventListener("click", () => {
+  currLineWidth--;
+  if (currLineWidth <= 1) {
+    currLineWidth = 1;
+    lineWidthDown.disabled = true;
+  }
+  lineWidthUp.disabled = false;
+
+  displayLineWidth(currLineWidth);
 });
 
 lineWidthUp.addEventListener("click", () => {
+  currLineWidth++;
+  if (currLineWidth >= maxLineWidth) {
+    currLineWidth = maxLineWidth;
+    lineWidthUp.disabled = true;
+  }
+  lineWidthDown.disabled = false;
+
+  displayLineWidth(currLineWidth);
 });
+
+function displayLineWidth(width: number) {
+  lineWidthDisplay.innerHTML = width.toString();
+}
 
 //#endregion
