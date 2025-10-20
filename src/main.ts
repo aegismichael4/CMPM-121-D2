@@ -3,12 +3,15 @@ import "./style.css";
 document.body.innerHTML = `
   <center><h1>Sticker Sketchpad!!!</h1><center>
   <center><canvas id="canvas" width="256px" height="256px""></canvas></center>
-  <p>\n\n</p>
+  <br></br>
   <center><button id="clear">clear</button> <button id="undo">undo</button>
     <button id="redo">redo</button></center>
-  <p>\n</p>
-  <center> <button id="line-width-down">Line Width Down</button> <button id="line-width-up">Line Width Up</button>
-    <p> line width: <span id="curr-line-width">1</span>px</p></center>
+  <br></br>
+  <center><p>tool:</p></center>
+  <center> <button id="pencil">✏️</button> | <button id="heart-sticker">❤️</button> <button id="lightning-sticker">⚡</button> <button id="saturn-sticker">🪐</button> </center>
+  <br></br>
+  <center> <button id="line-width-down">v</button> <button id="line-width-up">^</button>
+    <p> size: <span id="curr-line-width">1</span>px</p></center>
 `;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -20,13 +23,28 @@ const canvas: HTMLCanvasElement = document.getElementById(
   "canvas",
 ) as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
+ctx.textAlign = "center";
 
 // clear/undo/redo
 const clear = document.getElementById("clear")!;
 const undo = document.getElementById("undo")!;
 const redo = document.getElementById("redo")!;
 
-// line width
+// tool selection
+const pencil: HTMLButtonElement = document.getElementById(
+  "pencil",
+) as HTMLButtonElement;
+const heart: HTMLButtonElement = document.getElementById(
+  "heart-sticker",
+) as HTMLButtonElement;
+const lightning: HTMLButtonElement = document.getElementById(
+  "lightning-sticker",
+) as HTMLButtonElement;
+const saturn: HTMLButtonElement = document.getElementById(
+  "saturn-sticker",
+) as HTMLButtonElement;
+
+// tool size
 const lineWidthDown: HTMLButtonElement = document.getElementById(
   "line-width-down",
 ) as HTMLButtonElement;
@@ -52,7 +70,7 @@ bus.addEventListener("drawing-changed", () => {
 });
 
 bus.addEventListener("tool-moved", () => {
-  if (toolPreview) toolPreview.draw(ctx);
+  redraw();
 });
 
 //#endregion
@@ -63,19 +81,27 @@ bus.addEventListener("tool-moved", () => {
 
 type Point = { x: number; y: number };
 
-const commands: LineCommand[] = [];
-const redoCommands: LineCommand[] = [];
+const commands: Command[] = [];
+const redoCommands: Command[] = [];
 
-class LineCommand {
+class Command {
+  constructor() {}
+
+  drag(x: number, y: number): void {}
+  display(ctx: CanvasRenderingContext2D): void {}
+}
+
+class LineCommand extends Command {
   points: Point[] = [];
   lineWidth: number;
 
   constructor(x: number, y: number) {
+    super();
     this.points = [{ x, y }];
     this.lineWidth = currLineWidth;
   }
 
-  display(ctx: CanvasRenderingContext2D) {
+  override display(ctx: CanvasRenderingContext2D): void {
     if (this.points.length < 1) return;
 
     ctx.lineWidth = this.lineWidth;
@@ -87,41 +113,66 @@ class LineCommand {
     ctx.stroke();
   }
 
-  drag(x: number, y: number) {
+  override drag(x: number, y: number): void {
     this.points.push({ x, y });
   }
 }
 
-type Nullable<T> = T | null;
-
-class ToolPreviewCommand {
+class ToolPreviewCommand extends Command {
   radius: number;
   x: number;
   y: number;
 
   constructor(radius: number, x: number, y: number) {
+    super();
     this.radius = Math.ceil(radius / 2);
     this.x = x;
     this.y = y;
   }
 
-  position(x: number, y: number) {
+  override drag(x: number, y: number): void {
     this.x = x;
     this.y = y;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    redraw();
-
+  override display(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
     ctx.fill();
   }
 }
 
+class StickerCommand extends Command {
+  sticker: string;
+  x: number;
+  y: number;
+  size: number;
+
+  constructor(sticker: string, x: number, y: number, size: number) {
+    super();
+    this.sticker = sticker;
+    this.x = x;
+    this.y = y + 15;
+    this.size = size * 10;
+  }
+
+  override drag(x: number, y: number): void {
+    this.x = x;
+    this.y = y + 15;
+  }
+
+  override display(ctx: CanvasRenderingContext2D): void {
+    ctx.beginPath();
+    ctx.font = `${this.size}px serif`;
+    ctx.fillText(this.sticker, this.x, this.y);
+  }
+}
+
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  commands.forEach((command: LineCommand) => command.display(ctx));
+  commands.forEach((command: Command) => command.display(ctx));
+
+  if (toolPreview && !cursorDownFlag) toolPreview.display(ctx);
 }
 
 //#endregion
@@ -130,13 +181,15 @@ function redraw() {
 //#region MOUSE LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
+type Nullable<T> = T | null;
+
 let cursorDownFlag: boolean = false;
 
-let currentLineCommand: LineCommand;
-let toolPreview: Nullable<ToolPreviewCommand> = null;
+let currentLineCommand: Command;
+let toolPreview: Nullable<Command> = null;
 
 canvas.addEventListener("mousedown", (e) => {
-  currentLineCommand = new LineCommand(e.offsetX, e.offsetY);
+  currentLineCommand = createLine(e.offsetX, e.offsetY);
   commands.push(currentLineCommand);
 
   cursorDownFlag = true;
@@ -151,29 +204,28 @@ canvas.addEventListener("mouseleave", (e) => {
     currentLineCommand.drag(e.offsetX, e.offsetY);
   }
 
-  notify("drawing-changed");
   toolPreview = null;
+  notify("drawing-changed");
 });
 
 canvas.addEventListener("mouseenter", (e) => {
   if (cursorDownFlag) {
-    currentLineCommand = new LineCommand(e.offsetX, e.offsetY);
+    currentLineCommand = createLine(e.offsetX, e.offsetY);
     commands.push(currentLineCommand);
 
     notify("drawing-changed");
   }
 
-  toolPreview = new ToolPreviewCommand(currLineWidth, e.offsetX, e.offsetY);
+  toolPreview = createToolPreview(e.offsetX, e.offsetY);
   notify("tool-moved");
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (cursorDownFlag) {
     currentLineCommand.drag(e.offsetX, e.offsetY);
-
     notify("drawing-changed");
   } else {
-    if (toolPreview) toolPreview.position(e.offsetX, e.offsetY);
+    if (toolPreview) toolPreview.drag(e.offsetX, e.offsetY);
     notify("tool-moved");
   }
 });
@@ -252,7 +304,66 @@ document.addEventListener("keyup", (e) => {
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-//#region LINE WIDTH LOGIC
+//#region TOOL SELECTION LOGIC
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+
+let currSelectedTool: number = 0;
+
+const PENCIL_TOOL: number = 0;
+const HEART_STICKER: number = 1;
+const LIGHTNING_STICKER: number = 2;
+const SATURN_STICKER: number = 3;
+
+pencil.addEventListener("click", () => {
+  currSelectedTool = PENCIL_TOOL;
+});
+
+heart.addEventListener("click", () => {
+  currSelectedTool = HEART_STICKER;
+});
+
+lightning.addEventListener("click", () => {
+  currSelectedTool = LIGHTNING_STICKER;
+});
+
+saturn.addEventListener("click", () => {
+  currSelectedTool = SATURN_STICKER;
+});
+
+function createToolPreview(x: number, y: number): Command {
+  switch (currSelectedTool) {
+    case PENCIL_TOOL:
+      return new ToolPreviewCommand(currLineWidth, x, y);
+    case HEART_STICKER:
+      return new StickerCommand("❤️", x, y, currLineWidth);
+    case LIGHTNING_STICKER:
+      return new StickerCommand("⚡", x, y, currLineWidth);
+    case SATURN_STICKER:
+      return new StickerCommand("🪐", x, y, currLineWidth);
+    default:
+      return new ToolPreviewCommand(currLineWidth, x, y);
+  }
+}
+
+function createLine(x: number, y: number): Command {
+  switch (currSelectedTool) {
+    case PENCIL_TOOL:
+      return new LineCommand(x, y);
+    case HEART_STICKER:
+      return new StickerCommand("❤️", x, y, currLineWidth);
+    case LIGHTNING_STICKER:
+      return new StickerCommand("⚡", x, y, currLineWidth);
+    case SATURN_STICKER:
+      return new StickerCommand("🪐", x, y, currLineWidth);
+    default:
+      return new LineCommand(x, y);
+  }
+}
+
+//#endregion
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+//#region TOOL SIZE LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 let currLineWidth: number = 1;
