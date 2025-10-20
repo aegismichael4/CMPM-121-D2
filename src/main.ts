@@ -87,8 +87,8 @@ const redoCommands: Command[] = [];
 class Command {
   constructor() {}
 
-  drag(x: number, y: number): void {}
-  display(ctx: CanvasRenderingContext2D): void {}
+  drag(_x: number, _y: number): void {}
+  display(_ctx: CanvasRenderingContext2D): void {}
 }
 
 class LineCommand extends Command {
