@@ -51,6 +51,10 @@ bus.addEventListener("drawing-changed", () => {
   redraw();
 });
 
+bus.addEventListener("tool-moved", () => {
+  if (toolPreview) toolPreview.draw(ctx);
+});
+
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -88,10 +92,38 @@ class LineCommand {
   }
 }
 
+type Nullable<T> = T | null;
+
+class ToolPreviewCommand {
+  radius: number;
+  x: number;
+  y: number;
+
+  constructor(radius: number, x: number, y: number) {
+    this.radius = Math.ceil(radius / 2);
+    this.x = x;
+    this.y = y;
+  }
+
+  position(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    redraw();
+
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   commands.forEach((command: LineCommand) => command.display(ctx));
 }
+
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -101,6 +133,7 @@ function redraw() {
 let cursorDownFlag: boolean = false;
 
 let currentLineCommand: LineCommand;
+let toolPreview: Nullable<ToolPreviewCommand> = null;
 
 canvas.addEventListener("mousedown", (e) => {
   currentLineCommand = new LineCommand(e.offsetX, e.offsetY);
@@ -116,9 +149,10 @@ canvas.addEventListener("mouseup", () => {
 canvas.addEventListener("mouseleave", (e) => {
   if (cursorDownFlag) {
     currentLineCommand.drag(e.offsetX, e.offsetY);
-
-    notify("drawing-changed");
   }
+
+  notify("drawing-changed");
+  toolPreview = null;
 });
 
 canvas.addEventListener("mouseenter", (e) => {
@@ -128,6 +162,9 @@ canvas.addEventListener("mouseenter", (e) => {
 
     notify("drawing-changed");
   }
+
+  toolPreview = new ToolPreviewCommand(currLineWidth, e.offsetX, e.offsetY);
+  notify("tool-moved");
 });
 
 canvas.addEventListener("mousemove", (e) => {
@@ -135,6 +172,9 @@ canvas.addEventListener("mousemove", (e) => {
     currentLineCommand.drag(e.offsetX, e.offsetY);
 
     notify("drawing-changed");
+  } else {
+    if (toolPreview) toolPreview.position(e.offsetX, e.offsetY);
+    notify("tool-moved");
   }
 });
 

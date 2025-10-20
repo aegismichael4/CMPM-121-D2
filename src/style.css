@@ -9,4 +9,5 @@ canvas {
   border-radius: 15px;
   filter: drop-shadow(5px 5px 8px #000000);
   fill: #ffffff;
+  cursor: none;
 }
