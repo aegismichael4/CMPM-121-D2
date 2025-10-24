@@ -8,7 +8,7 @@ document.body.innerHTML = `
     <button id="redo">redo</button></center>
   <br></br>
   <center><p>tool:</p></center>
-  <center> <button id="pencil">✏️</button> | <button id="heart-sticker">❤️</button> <button id="lightning-sticker">⚡</button> <button id="saturn-sticker">🪐</button> </center>
+  <center> <button id="pencil">✏️</button> | <span id="sticker-container"></span> <button id="add-custom-sticker">➕</button> </center>
   <br></br>
   <center> <button id="line-width-down">v</button> <button id="line-width-up">^</button>
     <p> size: <span id="curr-line-width">1</span>px</p></center>
@@ -34,14 +34,11 @@ const redo = document.getElementById("redo")!;
 const pencil: HTMLButtonElement = document.getElementById(
   "pencil",
 ) as HTMLButtonElement;
-const heart: HTMLButtonElement = document.getElementById(
-  "heart-sticker",
-) as HTMLButtonElement;
-const lightning: HTMLButtonElement = document.getElementById(
-  "lightning-sticker",
-) as HTMLButtonElement;
-const saturn: HTMLButtonElement = document.getElementById(
-  "saturn-sticker",
+
+//sticker
+const stickerContainer = document.getElementById("sticker-container")!;
+const customSticker: HTMLButtonElement = document.getElementById(
+  "add-custom-sticker",
 ) as HTMLButtonElement;
 
 // tool size
@@ -147,24 +144,39 @@ class StickerCommand extends Command {
   x: number;
   y: number;
   size: number;
+  rotation: number = 0;
 
   constructor(sticker: string, x: number, y: number, size: number) {
     super();
     this.sticker = sticker;
     this.x = x;
-    this.y = y + 15;
+    this.y = y;
     this.size = size * 10;
   }
 
   override drag(x: number, y: number): void {
-    this.x = x;
-    this.y = y + 15;
+    this.rotation = Math.atan2(y + 15 - this.y, x - this.x);
   }
 
   override display(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();
     ctx.font = `${this.size}px serif`;
-    ctx.fillText(this.sticker, this.x, this.y);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.fillText(this.sticker, 0, 0);
+    ctx.restore();
+  }
+}
+
+class StickerPreview extends StickerCommand {
+  constructor(sticker: string, x: number, y: number, size: number) {
+    super(sticker, x, y, size);
+  }
+
+  override drag(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
   }
 }
 
@@ -304,59 +316,49 @@ document.addEventListener("keyup", (e) => {
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-//#region TOOL SELECTION LOGIC
+//#region TOOL SELECTION/STICKER LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-let currSelectedTool: number = 0;
-
-const PENCIL_TOOL: number = 0;
-const HEART_STICKER: number = 1;
-const LIGHTNING_STICKER: number = 2;
-const SATURN_STICKER: number = 3;
+const initialStickers: string[] = ["❤️", "⚡", "🪐"];
+let currSelectedTool: Nullable<string> = null;
 
 pencil.addEventListener("click", () => {
-  currSelectedTool = PENCIL_TOOL;
+  currSelectedTool = null;
 });
 
-heart.addEventListener("click", () => {
-  currSelectedTool = HEART_STICKER;
+initialStickers.forEach((emoji: string) => {
+  createStickerButton(emoji);
 });
 
-lightning.addEventListener("click", () => {
-  currSelectedTool = LIGHTNING_STICKER;
-});
+function createStickerButton(emoji: string): void {
+  const stickerButton: HTMLButtonElement = document.createElement(
+    "button",
+  ) as HTMLButtonElement;
+  stickerButton.innerHTML = emoji;
+  stickerButton.addEventListener("click", () => {
+    currSelectedTool = emoji;
+  });
+  stickerContainer.appendChild(stickerButton);
+}
 
-saturn.addEventListener("click", () => {
-  currSelectedTool = SATURN_STICKER;
+customSticker.addEventListener("click", () => {
+  const sticker: Nullable<string> = prompt("Custom Sticker Text:");
+  if (sticker != null) createStickerButton(sticker);
 });
 
 function createToolPreview(x: number, y: number): Command {
-  switch (currSelectedTool) {
-    case PENCIL_TOOL:
-      return new ToolPreviewCommand(currLineWidth, x, y);
-    case HEART_STICKER:
-      return new StickerCommand("❤️", x, y, currLineWidth);
-    case LIGHTNING_STICKER:
-      return new StickerCommand("⚡", x, y, currLineWidth);
-    case SATURN_STICKER:
-      return new StickerCommand("🪐", x, y, currLineWidth);
-    default:
-      return new ToolPreviewCommand(currLineWidth, x, y);
+  if (!currSelectedTool) {
+    return new ToolPreviewCommand(currLineWidth, x, y);
+  } else {
+    return new StickerPreview(currSelectedTool, x, y, currLineWidth);
   }
 }
 
 function createLine(x: number, y: number): Command {
-  switch (currSelectedTool) {
-    case PENCIL_TOOL:
-      return new LineCommand(x, y);
-    case HEART_STICKER:
-      return new StickerCommand("❤️", x, y, currLineWidth);
-    case LIGHTNING_STICKER:
-      return new StickerCommand("⚡", x, y, currLineWidth);
-    case SATURN_STICKER:
-      return new StickerCommand("🪐", x, y, currLineWidth);
-    default:
-      return new LineCommand(x, y);
+  if (!currSelectedTool) {
+    return new LineCommand(x, y);
+  } else {
+    return new StickerCommand(currSelectedTool, x, y, currLineWidth);
   }
 }
 
