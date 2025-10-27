@@ -146,19 +146,31 @@ class StickerCommand extends Command {
   size: number;
   rotation: number = 0;
 
+  dotPreview: ToolPreviewCommand;
+  drawDotPreview: boolean = false;
+
   constructor(sticker: string, x: number, y: number, size: number) {
     super();
     this.sticker = sticker;
     this.x = x;
     this.y = y;
     this.size = size * 10;
+
+    this.dotPreview = new ToolPreviewCommand(3, this.x, this.y);
   }
 
   override drag(x: number, y: number): void {
-    this.rotation = Math.atan2(y + 15 - this.y, x - this.x);
+    this.rotation = Math.atan2(y - this.y, x - this.x);
+
+    this.dotPreview.drag(x, y);
+    this.drawDotPreview = true;
   }
 
   override display(ctx: CanvasRenderingContext2D): void {
+    if (this.drawDotPreview) {
+      this.dotPreview.display(ctx);
+      this.drawDotPreview = false;
+    }
     ctx.beginPath();
     ctx.font = `${this.size}px serif`;
     ctx.save();
