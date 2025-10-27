@@ -6,10 +6,10 @@ document.body.innerHTML = `
   <br></br>
   <center><button id="clear">clear</button> <button id="undo">undo</button>
     <button id="redo">redo</button></center>
-  <br></br>
+  <br>
   <center><p>tool:</p></center>
   <center> <button id="pencil">✏️</button> | <span id="sticker-container"></span> <button id="add-custom-sticker">➕</button> </center>
-  <br></br>
+  <br>
   <center> <button id="line-width-down">v</button> <button id="line-width-up">^</button>
     <p> size: <span id="curr-line-width">1</span>px</p></center>
 `;
@@ -334,6 +334,10 @@ document.addEventListener("keyup", (e) => {
 const initialStickers: string[] = ["❤️", "⚡", "🪐"];
 let currSelectedTool: Nullable<string> = null;
 
+let stickerButtons: HTMLButtonElement[] = [];
+stickerButtons.push(pencil);
+pencil.disabled = true;
+
 pencil.addEventListener("click", () => {
   currSelectedTool = null;
 });
@@ -349,8 +353,17 @@ function createStickerButton(emoji: string): void {
   stickerButton.innerHTML = emoji;
   stickerButton.addEventListener("click", () => {
     currSelectedTool = emoji;
+    disableOrEnableAllStickers(false); // enable all buttons
+    stickerButton.disabled = true;
   });
   stickerContainer.appendChild(stickerButton);
+  stickerButtons.push(stickerButton);
+}
+
+function disableOrEnableAllStickers(disabled: boolean) {
+  stickerButtons.forEach((button: HTMLButtonElement) => {
+    button.disabled = disabled;
+  });
 }
 
 customSticker.addEventListener("click", () => {
