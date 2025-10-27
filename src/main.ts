@@ -12,6 +12,8 @@ document.body.innerHTML = `
   <br>
   <center> <button id="line-width-down">v</button> <button id="line-width-up">^</button>
     <p> size: <span id="curr-line-width">1</span>px</p></center>
+  <br>
+  <center> <button id="export">export</button></center>
 `;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -50,6 +52,9 @@ const lineWidthUp: HTMLButtonElement = document.getElementById(
 ) as HTMLButtonElement;
 const lineWidthDisplay = document.getElementById("curr-line-width")!;
 
+//export
+const exportButton = document.getElementById("export")!;
+
 //#endregion
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -63,11 +68,11 @@ function notify(name: string) {
 }
 
 bus.addEventListener("drawing-changed", () => {
-  redraw();
+  redraw(ctx, false);
 });
 
 bus.addEventListener("tool-moved", () => {
-  redraw();
+  redraw(ctx, false);
 });
 
 //#endregion
@@ -192,11 +197,19 @@ class StickerPreview extends StickerCommand {
   }
 }
 
-function redraw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  commands.forEach((command: Command) => command.display(ctx));
+function redraw(
+  drawCtx: CanvasRenderingContext2D,
+  drawWhiteBackground: boolean,
+) {
+  drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+  if (drawWhiteBackground) {
+    drawCtx.fillStyle = "white";
+    drawCtx.fillRect(0, 0, 1024, 1024);
+    drawCtx.fillStyle = "black";
+  }
+  commands.forEach((command: Command) => command.display(drawCtx));
 
-  if (toolPreview && !cursorDownFlag) toolPreview.display(ctx);
+  if (toolPreview && !cursorDownFlag) toolPreview.display(drawCtx);
 }
 
 //#endregion
@@ -334,19 +347,21 @@ document.addEventListener("keyup", (e) => {
 const initialStickers: string[] = ["❤️", "⚡", "🪐"];
 let currSelectedTool: Nullable<string> = null;
 
-let stickerButtons: HTMLButtonElement[] = [];
+const stickerButtons: HTMLButtonElement[] = [];
 stickerButtons.push(pencil);
 pencil.disabled = true;
 
 pencil.addEventListener("click", () => {
   currSelectedTool = null;
+  disableOrEnableAllStickers(false);
+  pencil.disabled = true;
 });
 
 initialStickers.forEach((emoji: string) => {
   createStickerButton(emoji);
 });
 
-function createStickerButton(emoji: string): void {
+function createStickerButton(emoji: string): HTMLButtonElement {
   const stickerButton: HTMLButtonElement = document.createElement(
     "button",
   ) as HTMLButtonElement;
@@ -358,6 +373,8 @@ function createStickerButton(emoji: string): void {
   });
   stickerContainer.appendChild(stickerButton);
   stickerButtons.push(stickerButton);
+
+  return stickerButton;
 }
 
 function disableOrEnableAllStickers(disabled: boolean) {
@@ -368,7 +385,12 @@ function disableOrEnableAllStickers(disabled: boolean) {
 
 customSticker.addEventListener("click", () => {
   const sticker: Nullable<string> = prompt("Custom Sticker Text:");
-  if (sticker != null) createStickerButton(sticker);
+  if (sticker != null) {
+    const stickerButton: HTMLButtonElement = createStickerButton(sticker);
+    disableOrEnableAllStickers(false);
+    stickerButton.disabled = true;
+    currSelectedTool = sticker;
+  }
 });
 
 function createToolPreview(x: number, y: number): Command {
@@ -422,5 +444,31 @@ lineWidthUp.addEventListener("click", () => {
 function displayLineWidth(width: number) {
   lineWidthDisplay.innerHTML = width.toString();
 }
+
+//#endregion
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+//#region EXPORT
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+
+exportButton.addEventListener("click", () => {
+  const exportCanvas: HTMLCanvasElement = document.createElement(
+    "canvas",
+  ) as HTMLCanvasElement;
+  exportCanvas.setAttribute("width", "1024px");
+  exportCanvas.setAttribute("height", "1024px");
+
+  const exportCtx: CanvasRenderingContext2D = exportCanvas.getContext(
+    "2d",
+  ) as CanvasRenderingContext2D;
+  exportCtx.scale(4, 4);
+  exportCtx.textAlign = "center";
+  redraw(exportCtx, true);
+
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
 
 //#endregion
