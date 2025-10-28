@@ -9,10 +9,11 @@ document.body.innerHTML = `
   <br>
   <center><p>tool:</p></center>
   <center> <button id="pencil">✏️</button> | <span id="sticker-container"></span> <button id="add-custom-sticker">➕</button> </center>
-  <br>
-  <center> <button id="line-width-down">v</button> <button id="line-width-up">^</button>
-    <p> size: <span id="curr-line-width">1</span>px</p></center>
-  <br>
+  <br><br>
+  <center> <p> size: <span id="curr-line-width">0</span>px</p>
+    <button id="line-width-down-big">vv</button> <button id="line-width-down">v</button> <button id="line-width-up">^</button> <button id="line-width-up-big">^^</button>
+    </center>
+  <br><br>
   <center> <button id="export">export</button></center>
 `;
 
@@ -44,11 +45,17 @@ const customSticker: HTMLButtonElement = document.getElementById(
 ) as HTMLButtonElement;
 
 // tool size
+const lineWidthDownBig: HTMLButtonElement = document.getElementById(
+  "line-width-down-big",
+) as HTMLButtonElement;
 const lineWidthDown: HTMLButtonElement = document.getElementById(
   "line-width-down",
 ) as HTMLButtonElement;
 const lineWidthUp: HTMLButtonElement = document.getElementById(
   "line-width-up",
+) as HTMLButtonElement;
+const lineWidthUpBig: HTMLButtonElement = document.getElementById(
+  "line-width-up-big",
 ) as HTMLButtonElement;
 const lineWidthDisplay = document.getElementById("curr-line-width")!;
 
@@ -415,31 +422,47 @@ function createLine(x: number, y: number): Command {
 //#region TOOL SIZE LOGIC
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-let currLineWidth: number = 1;
-const maxLineWidth: number = 10;
+let currLineWidth: number = 5;
+const maxLineWidth: number = 20;
 
-lineWidthDown.disabled = true;
+lineWidthDownBig.addEventListener("click", () => {
+  incrementLineWidth(-5);
+});
+
 lineWidthDown.addEventListener("click", () => {
-  currLineWidth--;
-  if (currLineWidth <= 1) {
-    currLineWidth = 1;
-    lineWidthDown.disabled = true;
-  }
-  lineWidthUp.disabled = false;
-
-  displayLineWidth(currLineWidth);
+  incrementLineWidth(-1);
 });
 
 lineWidthUp.addEventListener("click", () => {
-  currLineWidth++;
+  incrementLineWidth(1);
+});
+
+lineWidthUpBig.addEventListener("click", () => {
+  incrementLineWidth(5);
+});
+
+function incrementLineWidth(change: number) {
+  currLineWidth += change;
+
+  lineWidthDown.disabled = false;
+  lineWidthDownBig.disabled = false;
+  lineWidthUp.disabled = false;
+  lineWidthUpBig.disabled = false;
+
   if (currLineWidth >= maxLineWidth) {
     currLineWidth = maxLineWidth;
     lineWidthUp.disabled = true;
+    lineWidthUpBig.disabled = true;
+  } else if (currLineWidth <= 1) {
+    currLineWidth = 1;
+    lineWidthDown.disabled = true;
+    lineWidthDownBig.disabled = true;
   }
-  lineWidthDown.disabled = false;
 
   displayLineWidth(currLineWidth);
-});
+}
+
+incrementLineWidth(0);
 
 function displayLineWidth(width: number) {
   lineWidthDisplay.innerHTML = width.toString();

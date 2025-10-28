@@ -11,3 +11,14 @@ canvas {
   fill: #ffffff;
   cursor: none;
 }
+
+button {
+  width: 80px;
+  height: 30px;
+  font-size: medium;
+}
+
+p {
+  font-size: x-large;
+  line-height: 0;
+}
