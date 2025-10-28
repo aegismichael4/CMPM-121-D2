@@ -1,3 +1,4 @@
+import rainbowButton from "./rainbow-button.png";
 import "./style.css";
 
 document.body.innerHTML = `
@@ -9,6 +10,9 @@ document.body.innerHTML = `
   <br>
   <center><p>tool:</p></center>
   <center> <button id="pencil">✏️</button> | <span id="sticker-container"></span> <button id="add-custom-sticker">➕</button> </center>
+  <br><br>
+  <center> <button id="black" style="background-color: black;"></button> <button id="red" style="background-color: red;"></button> <button id="green" style="background-color: green;"></button>
+    <button id="blue" style="background-color: blue;"></button> <button id="rainbow" height="10px;" style="padding: 0px 0px; border: none"><img src="${rainbowButton}" style="border: 2px solid #000000;" position="10px"></button> </center>
   <br><br>
   <center> <p> size: <span id="curr-line-width">0</span>px</p>
     <button id="line-width-down-big">vv</button> <button id="line-width-down">v</button> <button id="line-width-up">^</button> <button id="line-width-up-big">^^</button>
@@ -42,6 +46,23 @@ const pencil: HTMLButtonElement = document.getElementById(
 const stickerContainer = document.getElementById("sticker-container")!;
 const customSticker: HTMLButtonElement = document.getElementById(
   "add-custom-sticker",
+) as HTMLButtonElement;
+
+//color
+const black: HTMLButtonElement = document.getElementById(
+  "black",
+) as HTMLButtonElement;
+const red: HTMLButtonElement = document.getElementById(
+  "red",
+) as HTMLButtonElement;
+const green: HTMLButtonElement = document.getElementById(
+  "green",
+) as HTMLButtonElement;
+const blue: HTMLButtonElement = document.getElementById(
+  "blue",
+) as HTMLButtonElement;
+const rainbow: HTMLButtonElement = document.getElementById(
+  "rainbow",
 ) as HTMLButtonElement;
 
 // tool size
@@ -103,27 +124,34 @@ class Command {
 class LineCommand extends Command {
   points: Point[] = [];
   lineWidth: number;
+  color: string;
 
   constructor(x: number, y: number) {
     super();
     this.points = [{ x, y }];
     this.lineWidth = currLineWidth;
+    this.color = getCurrentColor();
   }
 
   override display(ctx: CanvasRenderingContext2D): void {
     if (this.points.length < 1) return;
 
     ctx.lineWidth = this.lineWidth;
+
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
+    ctx.strokeStyle = this.color;
 
-    this.points.forEach((point: Point) => ctx.lineTo(point.x, point.y));
+    this.points.forEach((point: Point) => {
+      ctx.lineTo(point.x, point.y);
+    });
 
     ctx.stroke();
   }
 
   override drag(x: number, y: number): void {
     this.points.push({ x, y });
+    this.color = getCurrentColor();
   }
 }
 
@@ -492,6 +520,74 @@ exportButton.addEventListener("click", () => {
   anchor.href = exportCanvas.toDataURL("image/png");
   anchor.download = "sketchpad.png";
   anchor.click();
+});
+
+//#endregion
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+//#region COLOR LOGIC
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+
+const BLACK: number = 0;
+const RED: number = 1;
+const GREEN: number = 2;
+const BLUE: number = 3;
+const RAINBOW: number = 4;
+
+let currColor: number = BLACK;
+let rainbowIterator: number = 0;
+
+function getCurrentColor(): string {
+  switch (currColor) {
+    case BLACK:
+      return "rgb(0,0,0)";
+    case RED:
+      return "rgb(255, 0, 0)";
+    case GREEN:
+      return "rgb(0,255,0)";
+    case BLUE:
+      return "rgb(0,0,255)";
+    case RAINBOW:
+      return rainbowColor();
+    default:
+      return "rgb(0, 0, 0)";
+  }
+}
+
+function rainbowColor(): string {
+  rainbowIterator += 0.05;
+
+  const r: string = channelValue(rainbowIterator % 6.0).toFixed();
+  const g: string = channelValue((rainbowIterator + 2) % 6.0).toFixed();
+  const b: string = channelValue((rainbowIterator + 4) % 6.0).toFixed();
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// takes a number 0-6 and returns single color channel
+// this is because rgb hues have six "phases" (g increasing, r decreasing, b increasing, g decreasing, r increasing, b decreasing) while hue shifting
+// result is 0-255
+function channelValue(t: number): number {
+  let result: number = Math.abs(t - 3) - 1;
+  result = Math.max(result, 0);
+  result = Math.min(result, 1);
+  return result * 255;
+}
+
+black.addEventListener("click", () => {
+  currColor = BLACK;
+});
+red.addEventListener("click", () => {
+  currColor = RED;
+});
+green.addEventListener("click", () => {
+  currColor = GREEN;
+});
+blue.addEventListener("click", () => {
+  currColor = BLUE;
+});
+rainbow.addEventListener("click", () => {
+  currColor = RAINBOW;
+  console.log(rainbowColor());
 });
 
 //#endregion
